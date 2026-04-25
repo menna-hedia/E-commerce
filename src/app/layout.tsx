@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "./_components/Navbar/Navbar";
 import Providers from "./_components/Providers/Providers";
-import CartContextProvider from "./_context/cartContext";
+// import CartContextProvider from "./_context/cartContext";
 import { getUserCart } from "_/api/services/routeServices";
 import { Toaster } from "sonner";
 
@@ -37,11 +37,11 @@ export default async function RootLayout({
       <body suppressHydrationWarning className="min-h-full flex flex-col">
 
         <Providers>
-          <CartContextProvider res={res}>
+          {/* <CartContextProvider res={res}> */}
             <Navbar />
             {children}
             <Toaster />
-          </CartContextProvider>
+          {/* </CartContextProvider> */}
         </Providers>
 
       </body>

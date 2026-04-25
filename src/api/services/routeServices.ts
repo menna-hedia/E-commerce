@@ -1,4 +1,4 @@
-import { ProductType ,CategoryType ,CartResponse} from "../types";
+import { ProductType ,CategoryType ,CartResponse, BrandType } from "../types";
 import { decodeAuthenticatedUserToken } from "_/app/utils";
 
 export async function getAllProducts(): Promise<ProductType[] | undefined>

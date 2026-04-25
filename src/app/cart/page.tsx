@@ -13,7 +13,7 @@ import RemoveButton from "./RemoveButton";
 import QuantityButtons from './counterButtons';
 import Link from "next/link"
 import ClearCartButton from "./ClearCartButton";
-// import { CartResponse, ProductType } from '_/api/types';
+import { CartResponse} from '_/api/types';
 // import CheckOutButton from "./CheckOutButton";
 import { Button } from "_/components/ui/button";
 

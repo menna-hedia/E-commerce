@@ -16,7 +16,7 @@ import ClearCartButton from "./ClearCartButton";
 import { CartResponse} from '_/api/types';
 // import CheckOutButton from "./CheckOutButton";
 import { Button } from "_/components/ui/button";
-
+import { ProductType } from '_/api/types';
 export default async function CartPage() {
   const cart = await getUserCart();
  

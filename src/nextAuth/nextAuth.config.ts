@@ -1,6 +1,21 @@
 import { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { jwtDecode } from 'jwt-decode';
+import NextAuth from "next-auth";
+
+declare module "next-auth" {
+  interface User {
+    tokenCredentials?: string;
+    id: string;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    routeToken?: string;
+    id?: string;
+  }
+}
 
 export const nextAuthConfig: NextAuthOptions = {
   providers: [

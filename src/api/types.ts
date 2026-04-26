@@ -18,6 +18,7 @@ export interface ProductType {
   images: string[]
   imageCover: string
   description: string
+  sold : number
   quantity: number
   price: number
   ratingsAverage: number

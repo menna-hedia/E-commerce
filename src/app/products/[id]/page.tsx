@@ -3,6 +3,7 @@ import { Star } from "lucide-react"
 import AddToCartButton from './../../_components/AddToCartButton/AddToCartButton';
 import WishlistButton from "_/app/_components/WishListButton/WishListButton";
 import { getUserWishlist } from "_/app/wishlist/wishlist.actions";
+import { ProductType } from '_/api/types';
 
 export default async function ProductDetails({
   params,
@@ -12,7 +13,7 @@ export default async function ProductDetails({
   const { id } = await params
 
 
-  const [product, wishlist] = await Promise.all([
+const [product, wishlist]: [ProductType | null, any] = await Promise.all([
     getProduct(id),
     getUserWishlist()
   ]);
@@ -105,7 +106,7 @@ export default async function ProductDetails({
         </div>
   {/* Sub Images */}
         <div className="grid grid-cols-4 gap-2">
-          {product.images?.map((img, i) => (
+          {product.images?.map((img: string, i: number) => (
             <img
               key={i}
               src={img}

@@ -96,7 +96,8 @@ export async function createOnlineOrderAction(cartId: string, bodyObject: OrderP
   const token = await decodeAuthenticatedUserToken();
   if (token) {
     try {
-      const res = await fetch(`https://ecommerce.routemisr.com/api/v1/orders/checkout-session/${cartId}?url=http://localhost:3000`, {
+      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+      const res = await fetch(`https://ecommerce.routemisr.com/api/v1/orders/checkout-session/${cartId}?url=${baseUrl}`, {
         method: "post",
         headers: { token: token, "content-type": "application/json" },
         body: JSON.stringify(bodyObject)

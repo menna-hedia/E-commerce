@@ -1,74 +1,98 @@
+import Link from "next/link"
+import { ArrowLeft, SearchX } from "lucide-react"
 import {
   getCategoryDetails,
+  getProducts,
   getSubCategoriesOnCategory,
-} from "_/api/services/routeServices";
+} from "_/api/services/routeServices"
+import EmptyState from "_/app/_components/EmptyState/EmptyState"
+import Reveal from "_/app/_components/Reveal/Reveal"
+import ProductGrid from "_/app/_components/ProductGrid/ProductGrid"
+import Pagination from "_/app/_components/Pagination/Pagination"
+import { getUserWishlist } from "_/app/wishlist/wishlist.actions"
 
 export default async function Page({
   params,
+  searchParams,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ page?: string }>
 }) {
-  const { id } = await params;
+  const { id } = await params
+  const { page } = await searchParams
+  const pageNumber = Number(page) || 1
 
-  const [category, subCategories] = await Promise.all([
+  const [category, subCategories, products, wishlist] = await Promise.all([
     getCategoryDetails(id),
     getSubCategoriesOnCategory(id),
-  ]);
+    getProducts({ category: id, limit: 12, page: pageNumber }),
+    getUserWishlist(),
+  ])
 
   if (!category) {
     return (
-      <div className="text-center py-20 text-gray-400 text-lg">
-        Category not found
-      </div>
-    );
+      <EmptyState
+        icon={<SearchX />}
+        title="Category not found"
+        text="We couldn't find this category."
+        href="/categories"
+        cta="All categories"
+      />
+    )
   }
 
+  const wishlistIds: string[] = wishlist ? wishlist.map((item: any) => item._id) : []
+
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 md:py-12">
+      <Link
+        href="/categories"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" />
+        All categories
+      </Link>
 
-      {/* Header */}
-      <div className="flex flex-col items-center text-center gap-4 mb-12">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-          {category.name}
-        </h1>
-        <div className="w-full max-w-3xl bg-white border rounded-2xl p-6 shadow-sm">
-          <img
-            src={category.image}
-            alt={category.name}
-            className="w-full h-72 object-contain"
-          />
+      <div className="fade-up mt-6 grid items-center gap-8 overflow-hidden rounded-3xl bg-card p-6 ring-1 ring-border md:grid-cols-[240px_1fr] md:p-8">
+        <div className="aspect-square overflow-hidden rounded-2xl bg-muted">
+          <img src={category.image} alt={category.name} className="size-full object-cover" />
         </div>
-      </div>
+        <div>
+          <h1 className="font-heading text-3xl font-bold md:text-5xl">{category.name}</h1>
+          <p className="mt-3 text-muted-foreground">
+            {subCategories.length} sub categories
+          </p>
 
-      {/* SubCategories */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">
-          Sub Categories
-        </h2>
-        <div className="w-16 h-1 bg-green-600 mt-2 rounded-full" />
-      </div>
-
-      {subCategories?.length ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-
-          {subCategories.map((sub: any) => (
-            <div
-              key={sub._id}
-              className="group bg-white border rounded-xl p-5 text-center
-                         hover:shadow-md hover:border-green-500 transition"
-            >
-              <h3 className="text-gray-800 font-medium group-hover:text-green-600">
-                {sub.name}
-              </h3>
+          {subCategories.length > 0 && (
+            <div className="mt-6 flex flex-wrap gap-2">
+              {subCategories.map((sub, i) => (
+                <Reveal key={sub._id} delay={Math.min(i, 8) * 40}>
+                  <span className="inline-block rounded-full bg-secondary px-4 py-2 text-sm font-medium">
+                    {sub.name}
+                  </span>
+                </Reveal>
+              ))}
             </div>
-          ))}
+          )}
+        </div>
+      </div>
 
-        </div>
+      <h2 className="mt-14 font-heading text-2xl font-bold">Products in {category.name}</h2>
+
+      {products.data.length ? (
+        <>
+          <div className="mt-8">
+            <ProductGrid products={products.data} wishlistIds={wishlistIds} />
+          </div>
+          <Pagination
+            currentPage={products.metadata?.currentPage ?? 1}
+            totalPages={products.metadata?.numberOfPages ?? 1}
+            basePath={`/categories/${id}`}
+          />
+        </>
       ) : (
-        <div className="text-center text-gray-400 py-10">
-          No subcategories available
-        </div>
+        <p className="py-10 text-muted-foreground">No products in this category yet.</p>
       )}
     </div>
-  );
+  )
 }

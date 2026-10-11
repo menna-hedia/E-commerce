@@ -1,111 +1,117 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "_/components/ui/table";
-
-import { getUserCart } from "_/api/services/routeServices";
-import RemoveButton from "./RemoveButton";
-import QuantityButtons from './counterButtons';
 import Link from "next/link"
-import ClearCartButton from "./ClearCartButton";
-import { CartResponse} from '_/api/types';
-// import CheckOutButton from "./CheckOutButton";
-import { Button } from "_/components/ui/button";
-import { ProductType } from '_/api/types';
+import { ShoppingBag } from "lucide-react"
+import { getUserCart } from "_/api/services/routeServices"
+import { CartResponse, ItemType } from "_/api/types"
+import { Button } from "_/components/ui/button"
+import RemoveButton from "./RemoveButton"
+import QuantityButtons from "./counterButtons"
+import ClearCartButton from "./ClearCartButton"
+import PageHeader from "../_components/PageHeader/PageHeader"
+import EmptyState from "../_components/EmptyState/EmptyState"
+
 export default async function CartPage() {
-  const cart = await getUserCart();
- 
-  
+  const cart = (await getUserCart()) as CartResponse | undefined
+
   if (!cart || !cart.products?.length) {
     return (
-      <div className="text-center mt-20 text-gray-500">
-        Your cart is empty
-      </div>
-    );
+      <EmptyState
+        icon={<ShoppingBag />}
+        title="Your cart is empty"
+        text="Add a few products and they will show up here."
+        href="/"
+        cta="Start shopping"
+      />
+    )
   }
-const cartData = cart as CartResponse | undefined;
-const cartId = cartData?._id;
+
+  const itemsCount = cart.products.reduce((n, item) => n + item.count, 0)
 
   return (
-    <div className=" w-300 mx-auto mt-10 px-4">
-      <div className="flex justify-between">
-      <h1 className="text-2xl font-bold mb-6">Your <span className="text-[#00A63E]">Cart</span></h1>
-    <div>
-        {/* <CheckOutButton/> */}
-        <Link href={`/cart/${cartId}`}>
-      <Button className=" text-white mx-5">
-        Check Out
-      </Button>
-    </Link>
-<ClearCartButton />
-    </div>
-</div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Product</TableHead>
-            <TableHead>Price</TableHead>
-            <TableHead>Quantity</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead></TableHead>
-          </TableRow>
-        </TableHeader>
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-12">
+      <PageHeader
+        title="Your cart"
+        description={`${itemsCount} ${itemsCount === 1 ? "item" : "items"}`}
+        action={<ClearCartButton />}
+      />
 
-        <TableBody>
-          {cart.products.map((item:any) => (
-            <TableRow key={item._id}>
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px] lg:items-start">
+        <ul className="space-y-4">
+          {cart.products.map((item: ItemType, i: number) => (
+            <li
+              key={item._id}
+              className="fade-up flex gap-4 rounded-2xl bg-card p-4 ring-1 ring-border sm:gap-6"
+              style={{ "--d": `${i * 60}ms` } as React.CSSProperties}
+            >
+              <Link
+                href={`/products/${item.product._id}`}
+                className="size-24 shrink-0 overflow-hidden rounded-xl bg-muted sm:size-28"
+              >
+                <img
+                  src={item.product.imageCover}
+                  alt={item.product.title}
+                  className="size-full object-cover transition-transform duration-500 hover:scale-105"
+                />
+              </Link>
 
-              {/* Product */}
-              <TableCell className="flex items-center gap-3 overflow-hidden max-w-2xl">
+              <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
+                <div>
+                  <Link
+                    href={`/products/${item.product._id}`}
+                    className="line-clamp-2 font-semibold leading-snug transition-colors hover:text-brand"
+                  >
+                    {item.product.title}
+                  </Link>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {item.price.toLocaleString("en-US")} EGP each
+                  </p>
+                </div>
 
-                <Link href={`/products/${item.product._id}`} className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <QuantityButtons id={item.product._id} count={item.count} />
 
-                  <img
-                    src={item.product.imageCover}
-                    className="w-16 h-16 rounded object-cover"
-                  />
-
-                  <span>{item.product.title}</span>
-
-                </Link>
-
-              </TableCell>
-
-              {/* Price */}
-              <TableCell>{item.price} EGP</TableCell>
-
-              {/* Quantity */}
-              <TableCell>
-                <QuantityButtons id={item.product._id} count={item.count} />
-              </TableCell>
-
-              {/* Total */}
-              <TableCell>
-                {item.price * item.count} EGP
-              </TableCell>
-
-              {/* Remove */}
-              <TableCell>
-                <RemoveButton id={item.product._id} />
-              </TableCell>
-
-            </TableRow>
+                  <div className="flex items-center gap-4">
+                    <p className="font-heading text-lg font-bold">
+                      {(item.price * item.count).toLocaleString("en-US")} EGP
+                    </p>
+                    <RemoveButton id={item.product._id} />
+                  </div>
+                </div>
+              </div>
+            </li>
           ))}
-        </TableBody>
+        </ul>
 
+        <aside
+          className="fade-up rounded-2xl bg-card p-6 ring-1 ring-border lg:sticky lg:top-24"
+          style={{ "--d": "150ms" } as React.CSSProperties}
+        >
+          <h2 className="font-heading text-xl font-bold">Order summary</h2>
 
-        <TableFooter>
-          <TableRow>
-            <TableCell colSpan={3}>Total Price</TableCell>
-            <TableCell>{cart.totalCartPrice} EGP</TableCell>
-          </TableRow>
-        </TableFooter>
-      </Table>
+          <dl className="mt-6 space-y-3 text-sm">
+            <div className="flex justify-between text-muted-foreground">
+              <dt>Items</dt>
+              <dd>{itemsCount}</dd>
+            </div>
+            <div className="flex justify-between border-t pt-4 text-base font-semibold">
+              <dt>Total</dt>
+              <dd className="font-heading text-xl font-bold">
+                {cart.totalCartPrice.toLocaleString("en-US")} EGP
+              </dd>
+            </div>
+          </dl>
+
+          <Button asChild className="mt-6 h-12 w-full rounded-xl text-base">
+            <Link href={`/cart/${cart._id}`}>Checkout</Link>
+          </Button>
+
+          <Link
+            href="/"
+            className="mt-4 block text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Continue shopping
+          </Link>
+        </aside>
+      </div>
     </div>
-  );
+  )
 }

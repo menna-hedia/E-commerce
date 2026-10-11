@@ -1,26 +1,31 @@
 "use client"
 
+import { useState } from "react"
+import { Trash2 } from "lucide-react"
 import { Button } from "_/components/ui/button"
 import { clearCart } from "_/app/cart/cart.actions"
-import { useRouter } from "next/navigation";
-// import { useContext } from "react"
-// import { CartContext } from "_/context/cartCotext"
+import { useRouter } from "next/navigation"
 
 export default function ClearCartButton() {
-//   const { setNumberOfCartItems } = useContext(CartContext)
-  const router = useRouter();
+  const router = useRouter()
+  const [busy, setBusy] = useState(false)
+
   async function handleClear() {
+    setBusy(true)
     await clearCart()
- router.refresh(); 
-    // setNumberOfCartItems(0)
+    router.refresh()
+    setBusy(false)
   }
 
   return (
     <Button
+      variant="destructive"
       onClick={handleClear}
-      className="bg-red-600 text-white"
+      disabled={busy}
+      className="h-9 rounded-full px-4 active:scale-95"
     >
-      Clear Cart
+      <Trash2 className="size-4" />
+      Clear cart
     </Button>
   )
 }

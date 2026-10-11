@@ -7,7 +7,7 @@ export default function CheckOutButton({ cartId }: { cartId: string }) {
    
   return (
     <Link href={`/cart/${cartId}`}>
-      <Button className=" text-white mx-5">
+      <Button className=" mx-5">
         Check Out
       </Button>
     </Link>

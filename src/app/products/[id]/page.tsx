@@ -1,126 +1,174 @@
-import { getProduct } from "_/api/services/routeServices"
-import { Star } from "lucide-react"
-import AddToCartButton from './../../_components/AddToCartButton/AddToCartButton';
-import WishlistButton from "_/app/_components/WishListButton/WishListButton";
-import { getUserWishlist } from "_/app/wishlist/wishlist.actions";
-import { ProductType } from '_/api/types';
+import { Suspense } from "react"
+import Link from "next/link"
+import type { Metadata } from "next"
+import { SearchX } from "lucide-react"
+import {
+  getProduct,
+  getProductReviews,
+  getProducts,
+} from "_/api/services/routeServices"
+import AddToCartButton from "./../../_components/AddToCartButton/AddToCartButton"
+import WishlistButton from "_/app/_components/WishListButton/WishListButton"
+import ProductGallery from "_/app/_components/ProductGallery/ProductGallery"
+import EmptyState from "_/app/_components/EmptyState/EmptyState"
+import ProductGrid from "_/app/_components/ProductGrid/ProductGrid"
+import ProductGridSkeleton from "_/app/_components/ProductGridSkeleton/ProductGridSkeleton"
+import ReviewsSection from "_/app/_components/ReviewsSection/ReviewsSection"
+import StarRating from "_/app/_components/StarRating/StarRating"
+import { getUserWishlist } from "_/app/wishlist/wishlist.actions"
+import { getSessionUserId } from "_/app/utils"
 
-export default async function ProductDetails({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
+type Params = Promise<{ id: string }>
+
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { id } = await params
-
-
-const [product, wishlist]: [ProductType | null, any] = await Promise.all([
-    getProduct(id),
-    getUserWishlist()
-  ]);
-
-  if (!product) {
-    return <div className="p-10 text-center text-2xl">Product not found</div>
+  const product = await getProduct(id)
+  return {
+    title: product?.title ?? "Product",
+    description: product?.description?.slice(0, 160),
   }
+}
 
-
-  const isInWishlist = wishlist?.some((item: any) => item._id === product._id) || false;
+async function RelatedProducts({
+  categoryId,
+  productId,
+  wishlistIds,
+}: {
+  categoryId: string
+  productId: string
+  wishlistIds: string[]
+}) {
+  const { data } = await getProducts({ category: categoryId, limit: 5 })
+  const related = data.filter((p) => p._id !== productId).slice(0, 4)
+  if (!related.length) return null
 
   return (
-    <div className="max-w-6xl m-10 p-5 mx-auto grid md:grid-cols-2 gap-10 border rounded-2xl bg-white shadow-sm">
-
-      {/* Image Gallery */}
-      <div className="space-y-4">
-        <div className="rounded-xl overflow-hidden border">
-          <img
-            src={product.imageCover}
-            alt={product.title}
-            className="w-full object-cover"
-          />
-        </div>
-        
-      
+    <section className="mt-20">
+      <h2 className="font-heading text-2xl font-bold md:text-3xl">You may also like</h2>
+      <div className="mt-8">
+        <ProductGrid products={related} wishlistIds={wishlistIds} />
       </div>
+    </section>
+  )
+}
 
-      {/* Info Content */}
-      <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-start">
-          <h1 className="text-3xl font-bold text-gray-800">{product.title}</h1>
-          
-          {/* Wishlist Button */}
-          <div className="p-1 border rounded-full shadow-sm hover:bg-gray-50 transition-colors">
-            <WishlistButton 
-              productId={product._id} 
-              isInWishlistInitial={isInWishlist} 
-            />
+export default async function ProductDetails({ params }: { params: Params }) {
+  const { id } = await params
+
+  const [product, wishlist, reviews, userId] = await Promise.all([
+    getProduct(id),
+    getUserWishlist(),
+    getProductReviews(id),
+    getSessionUserId(),
+  ])
+
+  if (!product) {
+    return (
+      <EmptyState
+        icon={<SearchX />}
+        title="Product not found"
+        text="This product may have been removed."
+        href="/products"
+        cta="Browse products"
+      />
+    )
+  }
+
+  const wishlistIds: string[] = wishlist ? wishlist.map((item: any) => item._id) : []
+  const isInWishlist = wishlistIds.includes(product._id)
+
+  const gallery = Array.from(
+    new Set([product.imageCover, ...(product.images ?? [])].filter(Boolean))
+  )
+
+  const hasDiscount =
+    typeof product.priceAfterDiscount === "number" && product.priceAfterDiscount < product.price
+  const finalPrice = hasDiscount ? (product.priceAfterDiscount as number) : product.price
+  const soldOut = product.quantity === 0
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 md:py-14">
+      <div className="grid gap-8 md:grid-cols-2 md:gap-14">
+        <ProductGallery images={gallery} title={product.title} />
+
+        <div className="flex flex-col gap-6">
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="font-heading text-3xl font-bold leading-tight md:text-4xl">
+              {product.title}
+            </h1>
+            <WishlistButton productId={product._id} isInWishlistInitial={isInWishlist} />
+          </div>
+
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Link
+              href={`/categories/${product.category._id}`}
+              className="rounded-full bg-secondary px-3 py-1 text-secondary-foreground transition-colors hover:bg-brand hover:text-brand-foreground"
+            >
+              {product.category.name}
+            </Link>
+            <Link
+              href={`/brands/${product.brand._id}`}
+              className="rounded-full bg-secondary px-3 py-1 text-secondary-foreground transition-colors hover:bg-brand hover:text-brand-foreground"
+            >
+              {product.brand.name}
+            </Link>
+          </div>
+
+          <a href="#reviews" className="flex w-fit items-center gap-2 text-sm text-muted-foreground">
+            <StarRating value={product.ratingsAverage} size={20} />
+            <span className="font-medium">
+              {product.ratingsAverage} · {reviews.length || product.ratingsQuantity} reviews
+            </span>
+          </a>
+
+          <div className="space-y-3 border-y py-5">
+            <p className="flex flex-wrap items-baseline gap-x-3 font-heading text-4xl font-bold">
+              <span>
+                {finalPrice.toLocaleString("en-US")}{" "}
+                <span className="text-base font-medium text-muted-foreground">EGP</span>
+              </span>
+              {hasDiscount && (
+                <span className="text-lg font-medium text-muted-foreground line-through">
+                  {product.price.toLocaleString("en-US")}
+                </span>
+              )}
+            </p>
+            <div className="flex items-center gap-5 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-2">
+                <span className={`size-2 rounded-full ${soldOut ? "bg-destructive" : "bg-brand"}`} />
+                {soldOut ? "Out of stock" : `${product.quantity} in stock`}
+              </span>
+              <span>{product.sold} sold</span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="font-heading text-lg font-semibold">Description</h2>
+            <p className="max-w-prose leading-relaxed text-muted-foreground">{product.description}</p>
+          </div>
+
+          <div className="mt-auto">
+            <AddToCartButton id={product._id} disabled={soldOut} />
           </div>
         </div>
-
-        {/* Category & Brand */}
-        <div className="flex gap-3 text-sm">
-          <span className="bg-gray-100 px-3 py-1 rounded-full text-gray-600">
-            Category: <b>{product.category.name}</b>
-          </span>
-          <span className="bg-gray-100 px-3 py-1 rounded-full text-gray-600">
-            Brand: <b>{product.brand.name}</b>
-          </span>
-        </div>
-
-        {/* Rating Section */}
-        <div className="flex items-center gap-1">
-          {Array.from({ length: 5 }).map((_, i) => {
-            const index = i + 1
-            return (
-              <Star
-                key={i}
-                size={20}
-                className={
-                  index <= Math.round(product.ratingsAverage)
-                    ? "fill-yellow-400 text-yellow-400"
-                    : "text-gray-300"
-                }
-              />
-            )
-          })}
-          <span className="text-sm text-gray-500 ml-2 font-medium">
-            {product.ratingsAverage} | {product.ratingsQuantity} Reviews
-          </span>
-        </div>
-
-        {/* Price & Stock */}
-        <div className="space-y-1 border-y py-4">
-          <p className="text-3xl font-bold text-green-700">
-            {product.price.toLocaleString()} EGP
-          </p>
-          <div className="flex justify-between text-sm text-gray-500">
-            <span>Available in stock: <b>{product.quantity}</b></span>
-            <span>Sold: <b>{product.sold}</b></span>
-          </div>
-        </div>
-
-        {/* Description */}
-        <div className="space-y-2">
-          <h3 className="font-semibold text-gray-700">Description:</h3>
-          <p className="text-gray-600 leading-relaxed">
-            {product.description}
-          </p>
-        </div>
-  {/* Sub Images */}
-        <div className="grid grid-cols-4 gap-2">
-          {product.images?.map((img: string, i: number) => (
-            <img
-              key={i}
-              src={img}
-              alt={`${product.title} ${i}`}
-              className="h-24 w-full object-cover rounded-md border hover:opacity-80 cursor-pointer"
-            />
-          ))}
-        </div>
-        {/* Add to Cart */}
-        <div className="mt-auto">
-          <AddToCartButton id={product._id} />
-        </div>
-
       </div>
+
+      <div className="mt-20">
+        <ReviewsSection
+          productId={product._id}
+          reviews={reviews}
+          userId={userId}
+          average={product.ratingsAverage}
+        />
+      </div>
+
+      <Suspense fallback={<div className="mt-20"><ProductGridSkeleton count={4} /></div>}>
+        <RelatedProducts
+          categoryId={product.category._id}
+          productId={product._id}
+          wishlistIds={wishlistIds}
+        />
+      </Suspense>
     </div>
   )
 }
